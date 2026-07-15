@@ -139,7 +139,11 @@ impl StarFun {
     }
 
     fn name_str(&self) -> String {
-        ident_string(&self.name)
+        if let Some(lit) = &self.name_override {
+            lit.value()
+        } else {
+            ident_string(&self.name)
+        }
     }
 
     /// Globals builder call to register the function.

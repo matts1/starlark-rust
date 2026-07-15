@@ -121,6 +121,7 @@ pub struct AValueVTable {
     pub(crate) static_type_of_value: ConstTypeId,
     pub(crate) starlark_type_id: StarlarkTypeId,
     pub(crate) type_name: &'static str,
+    pub(crate) type_value_dyn: unsafe fn(StarlarkValueRawPtr) -> FrozenStringValue,
     /// Cache `type_name` here to avoid computing hash.
     pub(crate) type_as_allocative_key: allocative::Key,
 
@@ -217,6 +218,7 @@ impl AValueVTable {
             starlark_serialize: |_, _| panic!("{}", PANIC_MSG),
             starlark_deserialize: |_, _| panic!("{}", PANIC_MSG),
             type_name: "UninitializedValue",
+            type_value_dyn: |_| panic!("{}", PANIC_MSG),
             type_as_allocative_key: UNINIT_ALLOCATIVE_KEY,
             deser_type_id: UNINIT_DESER_TYPE_ID,
             display: |_| panic!("{}", PANIC_MSG),
@@ -249,6 +251,7 @@ impl AValueVTable {
             starlark_serialize: |_, _| panic!("BlackHole"),
             starlark_deserialize: |_, _| panic!("BlackHole"),
             type_name: "BlackHole",
+            type_value_dyn: |_| panic!("BlackHole"),
             type_as_allocative_key: BLACKHOLE_ALLOCATIVE_KEY,
             deser_type_id: BLACKHOLE_DESER_TYPE_ID,
 
@@ -308,6 +311,9 @@ impl AValueVTable {
             static_type_of_value: GetTypeId::<T::StarlarkValue>::TYPE_ID,
             starlark_type_id: GetTypeId::<T::StarlarkValue>::STARLARK_TYPE_ID,
             type_name: T::StarlarkValue::TYPE,
+            type_value_dyn: |this| unsafe {
+                (&*this.value_ptr::<T::StarlarkValue>()).get_type_value_dyn()
+            },
             type_as_allocative_key: GetAllocativeKey::<T::StarlarkValue>::ALLOCATIVE_KEY,
             deser_type_id: GetDeserTypeId::<T::StarlarkValue>::DESER_TYPE_ID,
             display: |this| unsafe {
@@ -344,11 +350,6 @@ impl AValueVTable {
             },
             starlark_value: StarlarkValueVTableGet::<'v, T::StarlarkValue>::VTABLE,
         }
-    }
-
-    #[inline]
-    pub(crate) fn type_value(&'static self) -> FrozenStringValue {
-        (self.starlark_value.get_type_value_static)()
     }
 
     pub(crate) fn type_starlark_repr(&'static self) -> Ty {

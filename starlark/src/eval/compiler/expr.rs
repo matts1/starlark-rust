@@ -1112,9 +1112,11 @@ impl<P: AstPayload> CompilerExprUtil<P> for ExprP<P> {
 #[inline(never)]
 fn get_attr_no_attr_error<'v>(x: Value<'v>, attribute: &Symbol) -> crate::Error {
     match did_you_mean(attribute.as_str(), x.dir_attr().iter().map(|s| s.as_str())) {
-        None => ValueError::NoAttr(x.get_type().to_owned(), attribute.as_str().to_owned()).into(),
+        None => {
+            ValueError::NoAttr(x.get_type_dyn().to_owned(), attribute.as_str().to_owned()).into()
+        }
         Some(better) => ValueError::NoAttrDidYouMean(
-            x.get_type().to_owned(),
+            x.get_type_dyn().to_owned(),
             attribute.as_str().to_owned(),
             better.to_owned(),
         )
