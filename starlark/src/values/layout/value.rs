@@ -583,6 +583,11 @@ impl<'v> Value<'v> {
         self.vtable().type_name
     }
 
+    /// Dynamic type name of the value.
+    pub fn get_type_dyn(self) -> &'v str {
+        self.get_type_value().to_value().unpack_str().unwrap()
+    }
+
     /// `bool(x)`.
     pub fn to_bool(self) -> bool {
         // Fast path for the common case
@@ -825,7 +830,8 @@ impl<'v> Value<'v> {
 
     /// `type(x)`.
     pub fn get_type_value(self) -> FrozenStringValue {
-        self.vtable().type_value()
+        let dynamic = self.get_ref();
+        unsafe { (dynamic.vtable().type_value_dyn)(dynamic.value) }
     }
 
     /// See documentation of [`StarlarkTypeId`].
