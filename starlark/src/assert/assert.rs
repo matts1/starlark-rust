@@ -493,6 +493,26 @@ impl<'a> Assert<'a> {
         self.fails_with_name("fails", program, msgs)
     }
 
+    /// A program that must fail to freeze with an error message that contains a specific
+    /// string.
+    pub fn fail_to_freeze(&self, program: &str, msg: &str) -> crate::Error {
+        self.with_gc(|gc| {
+            Module::with_temp_heap(|env| {
+                self.execute_unwrap("fail_to_freeze", "assert.bzl", program, &env, gc);
+                match env.freeze_named(StarlarkTestHeapName::frozen_heap_name()) {
+                    Ok(_) => panic!("starlark::assert::fail_to_freeze, didn't fail to freeze!\nCode:\n{program}\n"),
+                    Err(e) => {
+                        let err_msg = &e.err_msg;
+                        if !err_msg.contains(msg) {
+                            panic!("starlark::assert::fail_to_freeze, wrong error message!\nExpected: {msg}\nGot: {err_msg}\n");
+                        }
+                        e.into()
+                    }
+                }
+            })
+        })
+    }
+
     /// A program that must execute successfully without an exception. Often uses
     /// assert_eq. Returns the resulting value.
     ///
