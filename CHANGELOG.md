@@ -39,6 +39,8 @@ Thanks to @danielhenrymantilla for discussion and feedback on the design of thes
 - `Heap::alloc_simple` requires a value that is simple at every brand (`for<'a>`), which is what
   lets it be moved to the frozen heap as it is; every type defined with `#[starlark_value]` and no
   lifetime already qualifies.
+- Custom record types (`MyType = record(...)`) support dynamic typing -
+  `type(MyType(...))` now returns `MyType` instead of `record`
 
 ### New APIs
 
