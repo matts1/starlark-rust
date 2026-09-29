@@ -55,7 +55,9 @@ use crate::values::AllocValue;
 use crate::values::Freeze;
 use crate::values::FreezeResult;
 use crate::values::Freezer;
+use crate::values::FrozenHeapName;
 use crate::values::Heap;
+use crate::values::OwnedFrozen;
 use crate::values::StarlarkValue;
 use crate::values::Trace;
 use crate::values::UnpackValue;
@@ -221,6 +223,27 @@ impl<'v> Freeze<'v> for RecordType<'v> {
                 ty: self.ty_record_data.ty.into_inner(),
             },
         })
+    }
+}
+
+impl<'v> FrozenRecordType<'v> {
+    /// Creates a new `FrozenRecordType`.
+    pub fn new(name: &str, fields: SmallMap<String, Field<'v>>, id: TypeInstanceId) -> Self {
+        let prototype = Self::make_parameter_spec_prototype(name, &fields);
+        Self {
+            id,
+            fields,
+            ty_record_data: RecordVariantFrozen {
+                ty: Some(Arc::new(TyRecordData {
+                    name_value: OwnedFrozen::build(FrozenHeapName::user("record"), |heap| {
+                        heap.alloc_str(name)
+                    }),
+                    ty_record: Ty::any(),
+                    ty_record_type: Ty::any(),
+                    parameter_spec_prototype: prototype,
+                })),
+            },
+        }
     }
 }
 
@@ -395,7 +418,9 @@ impl<'v, V: RecordVariant> StarlarkValue<'v> for RecordTypeGen<'v, V> {
             )?);
 
             Ok(Arc::new(TyRecordData {
-                name: variable_name.to_owned(),
+                name_value: OwnedFrozen::build(FrozenHeapName::user("record"), |heap| {
+                    heap.alloc_str(variable_name)
+                }),
                 ty_record,
                 ty_record_type,
                 parameter_spec_prototype: Self::make_parameter_spec_prototype(
@@ -415,7 +440,7 @@ fn record_type_methods(methods: &mut MethodsBuilder) {
             Either::Left(x) => x.ty_record_data.get_ty(),
             Either::Right(x) => x.ty_record_data.get_ty(),
         };
-        Ok(ty_record_type.map_or(Record::TYPE, |s| s.name.as_str()))
+        Ok(ty_record_type.map_or(Record::TYPE, |s| s.name()))
     }
 }
 
